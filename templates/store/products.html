@@ -1,0 +1,84 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Mahsulotlar{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Mahsulotlar</h2>
+    </div>
+    <div class="col-md-4">
+        <input type="text" id="search" class="form-control" placeholder="Qidirish...">
+    </div>
+</div>
+
+<div class="row" id="products-container">
+    <div class="col-12 text-center">
+        <div class="spinner-border" role="status"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadProducts(search='') {
+    const url = `/api/catalog/products/?search=${search}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const container = document.getElementById('products-container');
+    
+    if (data.results.length === 0) {
+        container.innerHTML = '<p class="text-muted">Mahsulot topilmadi</p>';
+        return;
+    }
+
+    container.innerHTML = data.results.map(p => `
+        <div class="col-md-4 mb-4">
+            <div class="card product-card h-100">
+                ${p.image ? `<img src="${p.image}" class="card-img-top" style="height:200px;object-fit:cover">` : 
+                '<div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height:200px">Rasm yo\'q</div>'}
+                <div class="card-body">
+                    <h5 class="card-title">${p.name}</h5>
+                    <p class="text-muted small">${p.category_name}</p>
+                    <p class="fw-bold text-success fs-5">${Number(p.price).toLocaleString()} so'm</p>
+                    <p class="small">${p.in_stock ? '<span class="text-success">✓ Mavjud</span>' : '<span class="text-danger">✗ Mavjud emas</span>'}</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary w-100" onclick="addToCart(${p.id})">
+                        🛒 Savatchaga qo'shish
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function addToCart(productId) {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        alert('Iltimos, avval tizimga kiring!');
+        window.location.href = '/login/';
+        return;
+    }
+    const res = await fetch('/api/orders/cart/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ product_id: productId, quantity: 1 })
+    });
+    if (res.ok) {
+        const data = await res.json();
+        document.getElementById('cart-count').textContent = data.items.length;
+        alert('Mahsulot savatchaga qo\'shildi!');
+    }
+}
+
+document.getElementById('search').addEventListener('input', (e) => {
+    loadProducts(e.target.value);
+});
+
+loadProducts();
+</script>
+{% endblock %}

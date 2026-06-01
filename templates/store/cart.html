@@ -1,0 +1,109 @@
+{% extends 'store/base.html' %}
+
+{% block title %}Savatcha{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">🛒 Savatcha</h2>
+
+<div id="cart-container">
+    <div class="text-center">
+        <div class="spinner-border" role="status"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadCart() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        document.getElementById('cart-container').innerHTML = `
+            <div class="alert alert-warning">
+                Savatchani ko'rish uchun <a href="/login/">tizimga kiring</a>
+            </div>`;
+        return;
+    }
+    const res = await fetch('/api/orders/cart/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const cart = await res.json();
+    const container = document.getElementById('cart-container');
+
+    if (!cart.items || cart.items.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">Savatcha bo\'sh</div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Mahsulot</th>
+                        <th>Narx</th>
+                        <th>Miqdor</th>
+                        <th>Jami</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${cart.items.map(item => `
+                        <tr>
+                            <td>${item.product.name}</td>
+                            <td>${Number(item.product.price).toLocaleString()} so'm</td>
+                            <td>${item.quantity}</td>
+                            <td>${Number(item.subtotal).toLocaleString()} so'm</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="removeItem(${item.id})">
+                                    O'chirish
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-end">
+            <h4>Jami: <strong class="text-success">${Number(cart.total).toLocaleString()} so'm</strong></h4>
+            <button class="btn btn-success btn-lg" onclick="checkout()">
+                Buyurtma berish
+            </button>
+        </div>`;
+    
+    document.getElementById('cart-count').textContent = cart.items.length;
+}
+
+async function removeItem(itemId) {
+    const token = localStorage.getItem('access_token');
+    await fetch('/api/orders/cart/', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ item_id: itemId })
+    });
+    loadCart();
+}
+
+async function checkout() {
+    const token = localStorage.getItem('access_token');
+    const address = prompt('Yetkazib berish manzilini kiriting:');
+    if (!address) return;
+    const res = await fetch('/api/orders/orders/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ address })
+    });
+    if (res.ok) {
+        alert('Buyurtma muvaffaqiyatli berildi!');
+        loadCart();
+    }
+}
+
+loadCart();
+</script>
+{% endblock %}

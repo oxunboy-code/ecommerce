@@ -1,0 +1,50 @@
+{% extends 'store/base.html' %}
+{% block title %}Kirish{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4">Tizimga kirish</h3>
+                <div id="error-msg" class="alert alert-danger d-none"></div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="email@gmail.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Parol</label>
+                    <input type="password" id="password" class="form-control" placeholder="********">
+                </div>
+                <button class="btn btn-primary w-100" onclick="login()">Kirish</button>
+                <hr>
+                <p class="text-center">Hisob yo'qmi? <a href="/register/">Ro'yxatdan o'ting</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function login() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const res = await fetch('/api/users/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        window.location.href = '/';
+    } else {
+        const err = document.getElementById('error-msg');
+        err.textContent = 'Email yoki parol xato!';
+        err.classList.remove('d-none');
+    }
+}
+</script>
+{% endblock %}
